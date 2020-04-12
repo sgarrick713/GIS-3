@@ -1,0 +1,44 @@
+---
+title: "Lab 1"
+author: "Sofia Garrick 04/12/20"
+output: pdf_document
+---
+
+
+# Version
+
+```{r, echo=TRUE}
+version
+```
+
+# Load Libraries
+
+I decided to load `RColorBrewer` and some important GIS libraries from Chapter 2.
+
+```{r, echo= TRUE, eval= FALSE}
+library(sf)
+library(raster)
+library(sp)
+```
+
+# Coding Examples
+
+### Example 1
+
+Here is code I used to answer question 4 from the Chapter 2.6 exercises 
+```{r, echo= TRUE, eval= TRUE}
+library(sp) #reloading libraries since eval= FALSE above
+library(raster)
+my_raster_2 = raster(nrows = 10, ncols = 10, res = 1, xmn = 0, xmx = 10, ymn = 0, ymx = 10, vals = runif(100,0,10))
+plot(my_raster_2, axes = TRUE)
+
+```
+
+### Example 2
+
+I was interested in getting the specific HEX color codes from the RColorBrewer collections, so here is the code I used to determine the colors from the PuRd collection which is adapted from the code provided on this [web page](https://www.stat.ubc.ca/~jenny/STAT545A/block14_colors.html).
+```{r, echo= TRUE, eval= TRUE}
+library(RColorBrewer)
+colors <- brewer.pal(n = 8, name = "PuRd")
+colors
+```
