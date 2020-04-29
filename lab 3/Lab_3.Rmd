@@ -1,0 +1,26 @@
+---
+title: "Lab_3"
+author: "Sofia Garrick"
+date: "4/26/2020"
+output: html_document
+---
+
+# Load Library & Data for JSON reading  
+```{r}
+library(jsonlite)
+bikes<- fromJSON(txt="http://feeds.bayareabikeshare.com/stations/stations.json")
+```
+
+# Create data frame from JSON file
+```{r}
+bikes_SF <- data.frame(bikes[2])
+```
+
+```{r warning = FALSE, message = FALSE}
+library(sp)
+library(tmap)
+bike <- SpatialPointsDataFrame(coords = cbind(bikes_SF$stationBeanList.longitude, bikes_SF$stationBeanList.latitude), data = bikes_SF, proj4string = CRS("+init=epsg:4326"))
+tmap_mode("view") + tm_shape(bike) +
+    tm_dots("stationBeanList.availableBikes", col = "stationBeanList.stationName", alpha = 0.5,legend.show = FALSE) +
+  tm_layout(title = "Available Bikes")
+```
