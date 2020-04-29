@@ -1,0 +1,150 @@
+---
+title: "Lab 3"
+author: "Sofia Garrick 4/26/20"
+output: html_document
+---
+
+# Read in CSV File from internet
+```{r}
+swimming_pools <- read.csv("https://www.data.brisbane.qld.gov.au/data/dataset/ccf67d3e-cfaf-4d30-8b78-a794c783af9f/resource/c09546c8-9526-4358-a1eb-81dbb224cdca/download/Pools-location-and-information-09Dec16.csv")
+head(swimming_pools)
+```
+
+# Load Library & Data for JSON reading  
+```{r}
+library(jsonlite)
+bikes<- fromJSON(txt="http://feeds.bayareabikeshare.com/stations/stations.json")
+```
+
+# Create data frame from JSON file
+```{r}
+bikes_SF <- data.frame(bikes[2])
+head(bikes_SF)
+```
+
+
+```{r}
+library(sp)
+bike <- SpatialPointsDataFrame(coords = cbind(bikes_SF$stationBeanList.longitude, bikes_SF$stationBeanList.latitude), data = bikes_SF, proj4string = CRS("+init=epsg:4326"))
+```
+
+```{r}
+library(sf)
+library(tmap)
+bike_sp <- st_as_sf(bikes_SF, coords = c("stationBeanList.longitude", "stationBeanList.latitude"))
+names(bike_sp)
+tmap_mode("view") + tm_shape(bike) +
+    tm_bubbles("stationBeanList.availableBikes", col = "stationBeanList.stationName", alpha = 0.5) +
+  tm_layout(title = "Follower Locations", legend.show = FALSE)
+```
+
+
+# Twitter Data
+
+### Load retweet package to analyze tweets
+
+```{r, message=FALSE, warning=FALSE}
+library("rtweet")
+library(jsonlite)
+```
+
+```{r}
+my_tokens <- create_token(app = "gislab3",
+    consumer_key = "7n743YTKBk9ktlSWuIafkSRx7",
+    consumer_secret = "ZLZAsBc0vnQ6ZUlYOQrWqjWjfRDt80gtV8e1hv5GVTYw09TTA5")
+```
+
+```{r eval=FALSE}
+save(my_tokens, file = "./my_tokens_env") # If you close down R, you can load this in a new session using "load()"
+```
+
+### Find User
+```{r}
+BCO <- lookup_users('bouldercolorado', token = my_tokens) #find user
+BCO
+BCO$followers_count #shows the number of followers
+```
+### Load data from twitter users
+```{r}
+load("/Users/sofiagarrick/Desktop/Downloads/followers_BCO_Details_All.Rdata")
+```
+
+```{r}
+head(followers_BCO_Details_All)
+```
+
+### Extract Details
+```{r}
+followers_BCO_Details_GEO <-followers_BCO_Details_All[!is.na(followers_BCO_Details_All$location),]
+# Show the top 6 rows
+head(followers_BCO_Details_GEO)
+```
+
+
+```{r}
+library(ggplot2)
+library(ggmap)
+```
+
+### Extract locations
+```{r}
+# List frq table of locations
+Locations <- data.frame(table(followers_BCO_Details_GEO$location))
+# Sort in decending order
+Locations <- Locations[order(-Locations$Freq),]
+head(Locations)
+```
+
+```{r}
+# create a sample of locations with a frequency over 1
+A <- Locations[Locations$Freq > 1,]
+# create a sample of locations with a frequency of 1
+B <- Locations[Locations$Freq == 1,]
+#Randomly select rows that when added to A will make the total rows 2500
+B <- B[sample(1:nrow(B),(2500 - nrow(A))),] 
+#Combine the two together and keep just the locations
+sample_locations <- as.character(rbind(A,B)[,"Var1"])
+#Show the first six locations
+head(sample_locations)
+```
+
+```{r}
+load("/Users/sofiagarrick/Desktop/Downloads/U_Locations_Geocode.Rdata")
+```
+
+```{r}
+# Column bind the two data frame object
+sample_locations_geocoded <- cbind(sample_locations,U_Locations_Geocode)
+# Show the first 6 rows
+head(sample_locations_geocoded)
+```
+
+```{r}
+# Append the geocoded locations
+Locations_GEO <- merge(Locations, sample_locations_geocoded, by.x="Var1",by.y="sample_locations",all.x = TRUE)
+# Remove all the records with no locations
+Locations_GEO <- Locations_GEO[!is.na(Locations_GEO$lat),]
+# Change the column names
+colnames(Locations_GEO) <- c("location","frequency","lon","lat")
+head(Locations_GEO)
+```
+
+### Map Locations of Followers
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("rgdal")
+library(tmap)
+library(spData)
+
+# Create a spatial points data frame
+boulder_SDF <- SpatialPointsDataFrame(coords = cbind(Locations_GEO$lon, Locations_GEO$lat), data = Locations_GEO, proj4string = CRS("+init=epsg:4326"))
+
+#Plot as a symbol map
+
+tmap_mode("view") + tm_shape(boulder_SDF) + 
+    tm_bubbles("frequency", title.size = "Users", col = "red") +
+  tm_layout(title = "Follower Locations", legend.show = FALSE)
+
+```
+
+
+
